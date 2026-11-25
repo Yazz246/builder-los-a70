@@ -42,19 +42,17 @@ jobs:
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
 
-      - name: 5. Hapus .repo, Hemat Storage & Buat Swap 14GB
+       - name: 5. Hapus .repo, Hemat Storage & Buat Swap 12GB
         run: |
           rm -rf ~/lineage/.repo
           rm -rf ~/lineage/prebuilts/*/darwin-x86
+          rm -rf ~/lineage/prebuilts/*/*/darwin-x86
           rm -rf ~/lineage/prebuilts/android-emulator
           rm -rf ~/lineage/prebuilts/qemu-kernel
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/x86
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/mips
-          rm -rf ~/lineage/prebuilts/vndk/v28 ~/lineage/prebuilts/vndk/v29 ~/lineage/prebuilts/vndk/v30
-          rm -rf ~/lineage/prebuilts/abi-dumps/vndk/28 ~/lineage/prebuilts/abi-dumps/vndk/29 ~/lineage/prebuilts/abi-dumps/vndk/30
-          rm -rf ~/lineage/prebuilts/abi-dumps/ndk/28 ~/lineage/prebuilts/abi-dumps/ndk/29 ~/lineage/prebuilts/abi-dumps/ndk/30
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo fallocate -l 14G /swapfile
+          sudo rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/*
+          sudo fallocate -l 12G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -66,6 +64,7 @@ jobs:
           cd ~/lineage
           export USE_CCACHE=0
           export DONT_DEXPREOPT_PREBUILTS=true
+          export SKIP_ABI_CHECKS=true
           export _JAVA_OPTIONS="-Xmx6g"
           export GOGC=50
           source build/envsetup.sh
