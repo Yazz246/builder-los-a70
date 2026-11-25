@@ -41,6 +41,21 @@ jobs:
           cd ~/lineage
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
+          python3 -c '
+          import re
+          p = "vendor/itel/A665L/Android.bp"
+          seen = {}
+          out = []
+          for line in open(p):
+              m = re.match(r"^(\s*name:\s*\")([^\"]+)(\".*)$", line)
+              if m and m.group(2) in seen:
+                  seen[m.group(2)] += 1
+                  line = f"{m.group(1)}{m.group(2)}_dup_{seen[m.group(2)]}{m.group(3)}\n"
+              elif m:
+                  seen[m.group(2)] = 1
+              out.append(line)
+          open(p, "w").writelines(out)
+          '
 
       - name: 5. Hapus .repo & Buat Swap RAM 16GB
         run: |
