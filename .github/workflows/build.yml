@@ -35,7 +35,7 @@ jobs:
           git config --global user.email "builder@example.com"
           repo init -u https://github.com/LineageOS/android.git -b lineage-20.0 --git-lfs --depth=1
           repo sync -c --force-sync --optimized-fetch --no-tags --no-clone-bundle --prune -j$(nproc --all)
-
+        
       - name: 4. Clone Device & Vendor Tree
         run: |
           cd ~/lineage
@@ -48,6 +48,10 @@ jobs:
           p = f"{vdir}/Android.bp"
 
           aosp_mods = set()
+          skip_mk_prefixes = (
+              "vendor/", "device/", "hardware/qcom", "hardware/broadcom",
+              "hardware/nxp", "hardware/ti", "hardware/amlogic", "hardware/intel"
+          )
           for root, dirs, files in os.walk("."):
               dirs[:] = [d for d in dirs if not d.startswith(".") and d != "out"]
               rel_root = os.path.relpath(root, ".")
@@ -66,6 +70,14 @@ jobs:
                               for v in range(1, 6):
                                   for suf in ["-ndk", "-cpp", "-ndk_platform"]:
                                       aosp_mods.add(f"{n}-V{v}{suf}")
+                  except Exception:
+                      pass
+              if "Android.mk" in files and not rel_root.startswith(skip_mk_prefixes):
+                  mk_file = os.path.join(root, "Android.mk")
+                  try:
+                      txt = open(mk_file, errors="ignore").read()
+                      mk_names = re.findall(r'(?m)^\s*LOCAL_MODULE\s*:=\s*([^\s#\\$]+)', txt)
+                      aosp_mods.update(mk_names)
                   except Exception:
                       pass
 
@@ -101,7 +113,7 @@ jobs:
                       seen[mod_name] = 1
               kept_blocks.append(blk)
 
-          print("Modul bentrok AOSP yang dihapus:", removed)
+          print("Modul bentrok AOSP/LineageOS yang dihapus:", removed)
           content = "".join(kept_blocks)
 
           for mk_path in glob.glob(f"{vdir}/**/*.mk", recursive=True):
