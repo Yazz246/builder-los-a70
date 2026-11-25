@@ -42,7 +42,7 @@ jobs:
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
 
-       - name: 5. Hapus .repo, Hemat Storage & Buat Swap 12GB
+      - name: 5. Hapus .repo, Hemat Storage & Buat Swap 12GB
         run: |
           rm -rf ~/lineage/.repo
           rm -rf ~/lineage/prebuilts/*/darwin-x86
@@ -70,10 +70,11 @@ jobs:
           source build/envsetup.sh
           lunch lineage_A665L-userdebug
           m bacon -j$(nproc --all)
-          
+
       - name: 7. Upload Hasil ROM (.zip)
         run: |
           cd ~/lineage/out/target/product/A665L
           ROM_FILE=$(ls lineage-*.zip | head -n 1)
           echo "Mengupload $ROM_FILE..."
           curl -T "$ROM_FILE" https://temp.sh/"$ROM_FILE"
+          
