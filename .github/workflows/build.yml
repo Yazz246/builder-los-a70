@@ -41,21 +41,62 @@ jobs:
           cd ~/lineage
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
-          python3 -c '
-          import re
+          python3 - << 'EOF'
+          import glob, os, re, shutil
+
           p = "vendor/itel/A665L/Android.bp"
           seen = {}
           out = []
           for line in open(p):
-              m = re.match(r"^(\s*name:\s*\")([^\"]+)(\".*)$", line)
+              m = re.match(r'^(\s*name:\s*")([^"]+)(".*)$', line)
               if m and m.group(2) in seen:
                   seen[m.group(2)] += 1
                   line = f"{m.group(1)}{m.group(2)}_dup_{seen[m.group(2)]}{m.group(3)}\n"
               elif m:
                   seen[m.group(2)] = 1
               out.append(line)
-          open(p, "w").writelines(out)
-          '
+          content = "".join(out)
+
+          if 'name: "libc++_shared"' not in content:
+              os.makedirs("vendor/itel/A665L/proprietary/vendor/lib", exist_ok=True)
+              os.makedirs("vendor/itel/A665L/proprietary/vendor/lib64", exist_ok=True)
+              arm32 = "vendor/itel/A665L/proprietary/vendor/lib/libc++_shared.so"
+              arm64 = "vendor/itel/A665L/proprietary/vendor/lib64/libc++_shared.so"
+              if not os.path.exists(arm32):
+                  m32 = glob.glob("prebuilts/**/armeabi-v7a/libc++_shared.so", recursive=True)
+                  if m32:
+                      shutil.copy(m32[0], arm32)
+              if not os.path.exists(arm64):
+                  m64 = glob.glob("prebuilts/**/arm64-v8a/libc++_shared.so", recursive=True)
+                  if m64:
+                      shutil.copy(m64[0], arm64)
+              if os.path.exists(arm32) and os.path.exists(arm64):
+                  content += '''
+          cc_prebuilt_library_shared {
+              name: "libc++_shared",
+              owner: "itel",
+              strip: {
+                  none: true,
+              },
+              target: {
+                  android_arm: {
+                      srcs: ["proprietary/vendor/lib/libc++_shared.so"],
+                  },
+                  android_arm64: {
+                      srcs: ["proprietary/vendor/lib64/libc++_shared.so"],
+                  },
+              },
+              compile_multilib: "both",
+              check_elf_files: false,
+              prefer: true,
+              soc_specific: true,
+          }
+          '''
+              else:
+                  content = re.sub(r'^\s*"libc\+\+_shared",?\s*\n', '', content, flags=re.M)
+
+          open(p, "w").write(content)
+          EOF
 
       - name: 5. Hapus .repo & Buat Swap RAM 16GB
         run: |
