@@ -1,4 +1,4 @@
-name: Build LineageOS
+name: Build LineageOS 20
 
 on:
   workflow_dispatch:
