@@ -192,10 +192,15 @@ jobs:
           open(p, "w").write(content)
           EOF
        
-      - name: 5. Hapus .repo & Buat Swap RAM 16GB
+      - name: 5. Hapus .repo, Buang Prebuilt macOS/Emulator & Swap 8GB
         run: |
           rm -rf ~/lineage/.repo
-          sudo fallocate -l 16G /swapfile
+          rm -rf ~/lineage/prebuilts/*/darwin-x86
+          rm -rf ~/lineage/prebuilts/android-emulator
+          rm -rf ~/lineage/prebuilts/qemu-kernel
+          rm -rf ~/lineage/prebuilts/gcc/linux-x86/x86
+          rm -rf ~/lineage/prebuilts/gcc/linux-x86/mips
+          sudo fallocate -l 8G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -206,6 +211,8 @@ jobs:
         run: |
           cd ~/lineage
           export USE_CCACHE=0
+          export DONT_DEXPREOPT_PREBUILTS=true
+          export _JAVA_OPTIONS="-Xmx6g"
           source build/envsetup.sh
           lunch lineage_A665L-userdebug
           m bacon -j$(nproc --all)
