@@ -15,11 +15,14 @@ jobs:
 
       - name: 2. Buat Swap RAM 16GB (Anti-Hang)
         run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
           sudo fallocate -l 16G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
           free -h
+          
 
       - name: 3. Install Dependencies & Repo
         run: |
