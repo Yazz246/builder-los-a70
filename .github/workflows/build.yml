@@ -44,7 +44,8 @@ jobs:
           python3 - << 'EOF'
           import glob, os, re, shutil
 
-          p = "vendor/itel/A665L/Android.bp"
+          vdir = "vendor/itel/A665L"
+          p = f"{vdir}/Android.bp"
           seen = {}
           out = []
           for line in open(p):
@@ -57,11 +58,33 @@ jobs:
               out.append(line)
           content = "".join(out)
 
+          def add_prebuilt(mod_name, rel32, rel64):
+              targets = []
+              if rel32:
+                  targets.append(f'        android_arm: {{\n            srcs: ["{rel32}"],\n        }},')
+              if rel64:
+                  targets.append(f'        android_arm64: {{\n            srcs: ["{rel64}"],\n        }},')
+              if not targets:
+                  return ""
+              multilib = "both" if (rel32 and rel64) else ("64" if rel64 else "32")
+              return (
+                  f'\ncc_prebuilt_library_shared {{\n'
+                  f'    name: "{mod_name}",\n'
+                  f'    owner: "itel",\n'
+                  f'    strip: {{\n        none: true,\n    }},\n'
+                  f'    target: {{\n' + "\n".join(targets) + '\n    },\n'
+                  f'    compile_multilib: "{multilib}",\n'
+                  f'    check_elf_files: false,\n'
+                  f'    prefer: true,\n'
+                  f'    soc_specific: true,\n'
+                  f'}}\n'
+              )
+
           if 'name: "libc++_shared"' not in content:
-              os.makedirs("vendor/itel/A665L/proprietary/vendor/lib", exist_ok=True)
-              os.makedirs("vendor/itel/A665L/proprietary/vendor/lib64", exist_ok=True)
-              arm32 = "vendor/itel/A665L/proprietary/vendor/lib/libc++_shared.so"
-              arm64 = "vendor/itel/A665L/proprietary/vendor/lib64/libc++_shared.so"
+              os.makedirs(f"{vdir}/proprietary/vendor/lib", exist_ok=True)
+              os.makedirs(f"{vdir}/proprietary/vendor/lib64", exist_ok=True)
+              arm32 = f"{vdir}/proprietary/vendor/lib/libc++_shared.so"
+              arm64 = f"{vdir}/proprietary/vendor/lib64/libc++_shared.so"
               if not os.path.exists(arm32):
                   m32 = glob.glob("prebuilts/**/armeabi-v7a/libc++_shared.so", recursive=True)
                   if m32:
@@ -71,29 +94,20 @@ jobs:
                   if m64:
                       shutil.copy(m64[0], arm64)
               if os.path.exists(arm32) and os.path.exists(arm64):
-                  content += '''
-          cc_prebuilt_library_shared {
-              name: "libc++_shared",
-              owner: "itel",
-              strip: {
-                  none: true,
-              },
-              target: {
-                  android_arm: {
-                      srcs: ["proprietary/vendor/lib/libc++_shared.so"],
-                  },
-                  android_arm64: {
-                      srcs: ["proprietary/vendor/lib64/libc++_shared.so"],
-                  },
-              },
-              compile_multilib: "both",
-              check_elf_files: false,
-              prefer: true,
-              soc_specific: true,
-          }
-          '''
+                  content += add_prebuilt("libc++_shared", "proprietary/vendor/lib/libc++_shared.so", "proprietary/vendor/lib64/libc++_shared.so")
               else:
                   content = re.sub(r'^\s*"libc\+\+_shared",?\s*\n', '', content, flags=re.M)
+
+          for pb in ["libprotobuf-cpp-full-3.9.1", "libprotobuf-cpp-lite-3.9.1"]:
+              if f'name: "{pb}"' not in content:
+                  f32 = [f for f in glob.glob(f"{vdir}/proprietary/**/lib/{pb}.so", recursive=True)]
+                  f64 = [f for f in glob.glob(f"{vdir}/proprietary/**/lib64/{pb}.so", recursive=True)]
+                  if f32 or f64:
+                      r32 = os.path.relpath(f32[0], vdir) if f32 else None
+                      r64 = os.path.relpath(f64[0], vdir) if f64 else None
+                      content += add_prebuilt(pb, r32, r64)
+                  else:
+                      content = content.replace(f'"{pb}"', f'"{pb.replace("-3.9.1", "")}"')
 
           open(p, "w").write(content)
           EOF
