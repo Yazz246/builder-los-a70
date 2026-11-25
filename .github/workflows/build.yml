@@ -70,7 +70,7 @@ jobs:
           source build/envsetup.sh
           lunch lineage_A665L-userdebug
           m bacon -j$(nproc --all)
-
+          
       - name: 7. Upload Hasil ROM (.zip)
         run: |
           cd ~/lineage/out/target/product/A665L
