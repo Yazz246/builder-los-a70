@@ -50,6 +50,8 @@ jobs:
         run: |
           rm -rf ~/lineage/.repo
           rm -rf ~/lineage/cts
+          mkdir -p ~/lineage/cts
+          printf 'java_defaults {\n    name: "cts_error_prone_rules",\n}\n\njava_defaults {\n    name: "cts_defaults",\n}\n' > ~/lineage/cts/Android.bp
           rm -rf ~/lineage/developers
           rm -rf ~/lineage/docs
           rm -rf ~/lineage/prebuilts/*/darwin-x86
