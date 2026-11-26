@@ -3,6 +3,10 @@ name: Build LineageOS
 on:
   workflow_dispatch:
 
+concurrency:
+  group: lineage-build
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -42,9 +46,12 @@ jobs:
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
 
-      - name: 5. Hapus .repo, Hemat Storage & Buat Swap 12GB
+      - name: 5. Hapus .repo, Hemat Storage & Buat Swap 15GB
         run: |
           rm -rf ~/lineage/.repo
+          rm -rf ~/lineage/cts
+          rm -rf ~/lineage/developers
+          rm -rf ~/lineage/docs
           rm -rf ~/lineage/prebuilts/*/darwin-x86
           rm -rf ~/lineage/prebuilts/*/*/darwin-x86
           rm -rf ~/lineage/prebuilts/android-emulator
@@ -52,7 +59,8 @@ jobs:
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/x86
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/mips
           sudo rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/*
-          sudo fallocate -l 12G /swapfile
+          sudo sysctl vm.swappiness=10
+          sudo fallocate -l 15G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -65,11 +73,11 @@ jobs:
           export USE_CCACHE=0
           export DONT_DEXPREOPT_PREBUILTS=true
           export SKIP_ABI_CHECKS=true
-          export _JAVA_OPTIONS="-Xmx6g"
-          export GOGC=50
+          export _JAVA_OPTIONS="-Xmx4g"
           source build/envsetup.sh
           lunch lineage_A665L-userdebug
-          m bacon -j$(nproc --all)
+          GOGC=30 m nothing -j1
+          GOGC=50 m bacon -j2
 
       - name: 7. Upload Hasil ROM (.zip)
         run: |
@@ -77,4 +85,3 @@ jobs:
           ROM_FILE=$(ls lineage-*.zip | head -n 1)
           echo "Mengupload $ROM_FILE..."
           curl -T "$ROM_FILE" https://temp.sh/"$ROM_FILE"
-          
