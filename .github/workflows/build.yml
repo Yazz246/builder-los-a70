@@ -48,7 +48,17 @@ jobs:
 
       - name: 5. Hapus .repo, Hemat Storage & Buat Swap 14GB
         run: |
+          cd ~/lineage
+          python3 .repo/repo/repo manifest -o - -r > /tmp/saved_manifest.xml
           rm -rf ~/lineage/.repo
+          mkdir -p ~/lineage/.repo/repo
+          mv /tmp/saved_manifest.xml ~/lineage/.repo/saved_manifest.xml
+          cat << 'EOF' > ~/lineage/.repo/repo/repo
+          import os, sys
+          manifest = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "saved_manifest.xml")
+          with open(manifest, "r") as f:
+              sys.stdout.write(f.read())
+          EOF
           rm -rf ~/lineage/developers
           rm -rf ~/lineage/docs
           rm -rf ~/lineage/prebuilts/remoteexecution-client
