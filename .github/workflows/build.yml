@@ -46,7 +46,7 @@ jobs:
           git clone --depth=1 https://github.com/Yazz246/android_device_itel_A665L -b main device/itel/A665L
           git clone --depth=1 https://github.com/Yazz246/android_vendor_itel_A665L -b main vendor/itel/A665L
 
-      - name: 5. Hapus .repo, Hemat Storage & Buat Swap 14GB
+      - name: 5. Hapus .repo, Hemat Storage & Pindah Swap ke /mnt
         run: |
           cd ~/lineage
           python3 .repo/repo/repo manifest -o - -r > /tmp/saved_manifest.xml
@@ -61,19 +61,34 @@ jobs:
           EOF
           rm -rf ~/lineage/developers
           rm -rf ~/lineage/docs
+          rm -rf ~/lineage/cts
           rm -rf ~/lineage/prebuilts/remoteexecution-client
+          rm -rf ~/lineage/prebuilts/gradle-plugin
+          rm -rf ~/lineage/prebuilts/maven_repo
+          rm -rf ~/lineage/prebuilts/ndk
           rm -rf ~/lineage/prebuilts/*/darwin-x86
           rm -rf ~/lineage/prebuilts/*/*/darwin-x86
           rm -rf ~/lineage/prebuilts/android-emulator
           rm -rf ~/lineage/prebuilts/qemu-kernel
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/x86
           rm -rf ~/lineage/prebuilts/gcc/linux-x86/mips
-          sudo rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/*
+          rm -rf ~/lineage/prebuilts/gcc/linux-x86/riscv64
+          sudo rm -rf /var/lib/apt/lists/* /var/cache/* /usr/share/doc/* /usr/share/man/*
+          sudo rm -rf /usr/share/swift /usr/share/miniconda /usr/local/share/powershell /usr/local/share/chromium /usr/local/google-cloud-sdk /usr/local/aws* /usr/local/julia*
           sudo sysctl vm.swappiness=10
-          sudo fallocate -l 14G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          MNT_AVAIL_GB=$(df -BG --output=avail /mnt | tail -n 1 | tr -dc '0-9')
+          SWAP_GB=$(( MNT_AVAIL_GB > 2 ? MNT_AVAIL_GB - 1 : 0 ))
+          if [ "$SWAP_GB" -ge 4 ]; then
+            sudo fallocate -l "${SWAP_GB}G" /mnt/swapfile
+            sudo chmod 600 /mnt/swapfile
+            sudo mkswap /mnt/swapfile
+            sudo swapon /mnt/swapfile
+          else
+            sudo fallocate -l 10G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+          fi
           df -h
           free -h
 
@@ -81,13 +96,15 @@ jobs:
         run: |
           cd ~/lineage
           export USE_CCACHE=0
+          export WITH_DEXPREOPT=false
           export DONT_DEXPREOPT_PREBUILTS=true
+          export PRODUCT_MINIMIZE_JAVA_DEBUG_INFO=true
           export SKIP_ABI_CHECKS=true
           export _JAVA_OPTIONS="-Xmx4g"
           source build/envsetup.sh
           lunch lineage_A665L-userdebug
           GOGC=30 m nothing -j1
-          GOGC=50 m bacon -j2
+          GOGC=50 m bacon -j2 2>&1 | tee /tmp/build.log || { echo "=== 100 BARIS LOG TERAKHIR ==="; tail -n 100 /tmp/build.log; exit 1; }
 
       - name: 7. Upload Hasil ROM (.zip)
         run: |
